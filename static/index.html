@@ -39,13 +39,7 @@
         <div id="account-popover" class="account-popover hidden">
           <p id="account-popover-status" class="page-summary">未登录</p>
           <div class="admin-actions">
-            <button id="account-login-cellphone" type="button" class="secondary-button">手机登录</button>
-            <button id="account-register-cellphone" type="button" class="secondary-button">注册</button>
-            <button id="account-captcha-send" type="button" class="secondary-button">验证码</button>
-          </div>
-          <div class="admin-actions">
-            <button id="account-open-qr-login" type="button" class="secondary-button">二维码登录</button>
-            <button id="account-daily-signin" type="button" class="secondary-button">每日签到</button>
+            <button id="account-open-qr-login" type="button" class="secondary-button">登录中心</button>
           </div>
         </div>
         <a class="topbar-link" href="#playlist-form">歌单查询</a>
@@ -185,22 +179,22 @@
         <h3>功能中心（api-enhanced）</h3>
         <span id="feature-status" class="page-summary">请选择功能并执行</span>
       </div>
-      <div class="pagination-toolbar">
-        <label class="page-size-control" for="feature-action-select">
-          <span>功能</span>
-          <select id="feature-action-select"></select>
-        </label>
-      </div>
-      <form id="feature-form" class="admin-form">
-        <label for="feature-params">参数 JSON（可空）</label>
-        <textarea id="feature-params" placeholder='例如：{"id":"347230"}'></textarea>
-        <div class="admin-actions">
-          <button type="submit">执行功能</button>
+      <section class="feature-center">
+        <form id="feature-form" class="admin-form feature-form-card">
+          <label class="page-size-control" for="feature-action-select">
+            <span>功能</span>
+            <select id="feature-action-select"></select>
+          </label>
+          <label for="feature-params">参数 JSON（可空）</label>
+          <textarea id="feature-params" placeholder='例如：{"id":"347230"}'></textarea>
+          <div class="admin-actions">
+            <button type="submit">执行功能</button>
+          </div>
+        </form>
+        <div class="table-wrap feature-result-wrap">
+          <pre id="feature-result" class="feature-result">结果会显示在这里。</pre>
         </div>
-      </form>
-      <div class="table-wrap">
-        <pre id="feature-result" class="feature-result">结果会显示在这里。</pre>
-      </div>
+      </section>
     </section>
 
   </main>
@@ -350,17 +344,28 @@
         <button id="close-login-modal" type="button" class="modal-close" aria-label="关闭登录弹窗">关闭</button>
       </div>
       <section class="login-panel">
+        <div class="login-meta login-form-card">
+          <p id="login-user-status" class="status">当前未检测到网易云登录状态。</p>
+          <p id="login-action-status" class="page-summary">可切换密码或验证码登录，右侧二维码每 5 分钟自动刷新。</p>
+          <fieldset class="login-mode-switch">
+            <legend>登录方式</legend>
+            <label><input id="login-mode-password" type="radio" name="login-mode" value="password" checked> 密码登录</label>
+            <label><input id="login-mode-captcha" type="radio" name="login-mode" value="captcha"> 验证码登录</label>
+          </fieldset>
+          <label for="login-phone-input">手机号</label>
+          <input id="login-phone-input" class="admin-input" type="text" placeholder="请输入手机号">
+          <label for="login-password-input">密码</label>
+          <input id="login-password-input" class="admin-input" type="password" placeholder="请输入密码（用于密码登录/注册）">
+          <label for="login-captcha-input">验证码</label>
+          <input id="login-captcha-input" class="admin-input" type="text" placeholder="请输入验证码">
+          <div class="admin-actions">
+            <button id="login-submit" type="button">登录</button>
+          </div>
+        </div>
         <div class="login-qr-card">
           <img id="login-qr-image" class="login-qr-image hidden" alt="网易云登录二维码">
-          <div id="login-qr-placeholder" class="login-qr-placeholder">点击下方按钮生成登录二维码</div>
-        </div>
-        <div class="login-meta">
-          <p id="login-user-status" class="status">当前未检测到网易云登录状态。</p>
-          <p id="login-qr-status" class="page-summary">生成二维码后，请使用网易云音乐 App 扫码登录。</p>
-          <div class="admin-actions">
-            <button id="refresh-login-qr" type="button">生成二维码</button>
-            <button id="login-daily-signin" type="button" class="secondary-button">每日签到</button>
-          </div>
+          <div id="login-qr-placeholder" class="login-qr-placeholder">二维码生成中，请稍候...</div>
+          <p id="login-qr-status" class="page-summary">请使用网易云音乐 App 扫码登录，二维码每 5 分钟自动刷新。</p>
         </div>
       </section>
     </section>

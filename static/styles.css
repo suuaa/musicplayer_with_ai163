@@ -538,7 +538,7 @@ tbody tr:hover {
 }
 
 .login-modal-panel {
-  width: min(760px, 100%);
+  width: min(920px, 100%);
 }
 
 .track-detail-cover {
@@ -561,15 +561,16 @@ tbody tr:hover {
 
 .login-panel {
   display: grid;
-  grid-template-columns: 280px 1fr;
+  grid-template-columns: minmax(320px, 1fr) 280px;
   gap: 24px;
   align-items: start;
 }
 
 .login-qr-card {
   display: grid;
+  gap: 12px;
   place-items: center;
-  min-height: 280px;
+  min-height: 100%;
   padding: 18px;
   background: var(--panel-strong);
   border: 1px solid var(--line);
@@ -599,6 +600,64 @@ tbody tr:hover {
 .login-meta {
   display: grid;
   gap: 14px;
+}
+
+.login-form-card {
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: var(--panel-strong);
+}
+
+.login-form-card label {
+  margin: 0;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.login-mode-switch {
+  margin: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  background: rgba(197, 60, 25, 0.04);
+}
+
+.login-mode-switch legend {
+  padding: 0 6px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.login-mode-switch label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.login-form-hidden {
+  display: none;
+}
+
+.feature-center {
+  display: grid;
+  grid-template-columns: minmax(280px, 360px) 1fr;
+  gap: 14px;
+}
+
+.feature-form-card {
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--panel-strong);
+}
+
+.feature-result-wrap {
+  min-height: 100%;
 }
 
 .player-toolbar {
@@ -1070,7 +1129,7 @@ tbody tr:hover {
 
 .admin-form textarea {
   width: 100%;
-  min-height: 280px;
+  min-height: 220px;
   resize: vertical;
   padding: 16px 18px;
   border: 1px solid rgba(123, 77, 39, 0.18);
@@ -1119,6 +1178,11 @@ tbody tr:hover {
   cursor: pointer;
 }
 
+.admin-actions button:not(.secondary-button) {
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 100%);
+  color: #fffaf3;
+}
+
 .secondary-button {
   color: var(--accent-dark);
   background: rgba(197, 60, 25, 0.08);
@@ -1135,6 +1199,10 @@ tbody tr:hover {
   .pagination-actions {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .feature-center {
+    grid-template-columns: 1fr;
   }
 }
 

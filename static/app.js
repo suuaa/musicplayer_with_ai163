@@ -68,16 +68,19 @@ const closeLoginModalButton = document.querySelector("#close-login-modal");
 const loginQrImage = document.querySelector("#login-qr-image");
 const loginQrPlaceholder = document.querySelector("#login-qr-placeholder");
 const loginUserStatus = document.querySelector("#login-user-status");
+const loginActionStatus = document.querySelector("#login-action-status");
 const loginQrStatus = document.querySelector("#login-qr-status");
-const refreshLoginQrButton = document.querySelector("#refresh-login-qr");
-const loginDailySigninButton = document.querySelector("#login-daily-signin");
+const loginModePassword = document.querySelector("#login-mode-password");
+const loginModeCaptcha = document.querySelector("#login-mode-captcha");
+const loginPhoneInput = document.querySelector("#login-phone-input");
+const loginPasswordInput = document.querySelector("#login-password-input");
+const loginCaptchaInput = document.querySelector("#login-captcha-input");
+const loginPasswordLabel = document.querySelector('label[for="login-password-input"]');
+const loginCaptchaLabel = document.querySelector('label[for="login-captcha-input"]');
+const loginSubmitButton = document.querySelector("#login-submit");
 const accountPopover = document.querySelector("#account-popover");
 const accountPopoverStatus = document.querySelector("#account-popover-status");
-const accountLoginCellphoneButton = document.querySelector("#account-login-cellphone");
-const accountRegisterCellphoneButton = document.querySelector("#account-register-cellphone");
-const accountCaptchaSendButton = document.querySelector("#account-captcha-send");
 const accountOpenQrLoginButton = document.querySelector("#account-open-qr-login");
-const accountDailySigninButton = document.querySelector("#account-daily-signin");
 const scrollTopButton = document.querySelector("#scroll-top-button");
 const topSearchForm = document.querySelector("#top-search-form");
 const topSearchKeywords = document.querySelector("#top-search-keywords");
@@ -105,6 +108,7 @@ const featureResult = document.querySelector("#feature-result");
 let scrollTopAnimationTimer = null;
 const PLAYER_STATE_KEY = "music_player_state_v1";
 let loginPollingTimer = null;
+let loginQrRefreshTimer = null;
 let activeLoginQrKey = "";
 let loginStatusRequestId = 0;
 let lyricTimeline = [];
@@ -114,10 +118,6 @@ let currentFeatureSettings = null;
 let lyricWordProgressIndex = -1;
 
 const FEATURE_ACTIONS = [
-  { key: "login_cellphone", label: "登录：手机登录", path: "/login/cellphone", enabledBy: "login_register_enabled", params: { phone: "", password: "" } },
-  { key: "captcha_sent", label: "登录：发送验证码", path: "/captcha/sent", enabledBy: "login_register_enabled", params: { phone: "" } },
-  { key: "captcha_verify", label: "登录：校验验证码", path: "/captcha/verify", enabledBy: "login_register_enabled", params: { phone: "", captcha: "" } },
-  { key: "register_cellphone", label: "注册：手机号注册", path: "/register/cellphone", enabledBy: "login_register_enabled", params: { phone: "", captcha: "", password: "", nickname: "" } },
   { key: "user_detail", label: "用户：用户信息", path: "/user/detail", enabledBy: "user_center_enabled", params: { uid: "" } },
   { key: "user_playlist", label: "用户：用户歌单", path: "/user/playlist", enabledBy: "user_center_enabled", params: { uid: "" } },
   { key: "user_event", label: "用户：用户动态", path: "/user/event", enabledBy: "user_center_enabled", params: { uid: "" } },
@@ -164,6 +164,13 @@ function stopLoginPolling() {
   }
 }
 
+function stopLoginQrRefreshTimer() {
+  if (loginQrRefreshTimer) {
+    window.clearTimeout(loginQrRefreshTimer);
+    loginQrRefreshTimer = null;
+  }
+}
+
 function updateLoginIndicator(statusData) {
   if (statusData?.logged_in) {
     neteaseLoginIndicator.textContent = statusData.nickname || "网易云用户";
@@ -179,7 +186,7 @@ function updateLoginIndicator(statusData) {
     }
   } else {
     neteaseLoginIndicator.textContent = "网易云登录";
-    accountPopoverStatus.textContent = "未登录，点击二维码登录";
+    accountPopoverStatus.textContent = "未登录，打开登录中心继续";
     openLoginModalButton.classList.remove("is-success");
     neteaseLoginAvatar.removeAttribute("src");
     neteaseLoginAvatar.classList.add("hidden");
@@ -209,15 +216,6 @@ async function checkLoginQrStatus(key) {
   const data = await response.json();
   if (!response.ok) {
     throw new Error(data.error || "检查登录状态失败。");
-  }
-  return data;
-}
-
-async function fetchDailySignin() {
-  const response = await fetch("/api/netease/signin", { method: "POST" });
-  const data = await response.json();
-  if (!response.ok) {
-    throw new Error(data.error || "签到失败。");
   }
   return data;
 }
@@ -326,14 +324,44 @@ function toggleAccountPopover(forceVisible) {
   accountPopover.classList.toggle("hidden", !shouldShow);
 }
 
-function jumpToFeatureAction(actionKey) {
-  const target = FEATURE_ACTIONS.find((item) => item.key === actionKey);
-  if (!target) {
-    return;
+function getLoginFormValues() {
+  return {
+    phone: loginPhoneInput.value.trim(),
+    password: loginPasswordInput.value.trim(),
+    captcha: loginCaptchaInput.value.trim(),
+  };
+}
+
+function getLoginMode() {
+  return loginModeCaptcha.checked ? "captcha" : "password";
+}
+
+function updateLoginModeUI() {
+  const mode = getLoginMode();
+  const isPasswordMode = mode === "password";
+  const isCaptchaMode = mode === "captcha";
+  loginPasswordInput.classList.toggle("login-form-hidden", !isPasswordMode);
+  loginCaptchaInput.classList.toggle("login-form-hidden", !isCaptchaMode);
+  loginPasswordLabel.classList.toggle("login-form-hidden", !isPasswordMode);
+  loginCaptchaLabel.classList.toggle("login-form-hidden", !isCaptchaMode);
+  loginPasswordInput.disabled = !isPasswordMode;
+  loginCaptchaInput.disabled = !isCaptchaMode;
+  loginSubmitButton.textContent = isCaptchaMode ? "发送验证码 / 登录" : "密码登录";
+  loginActionStatus.textContent = isCaptchaMode
+    ? "验证码模式：首次点击发送验证码，填入验证码后再次点击登录。"
+    : "密码模式：输入手机号和密码后登录。";
+}
+
+async function runLoginAction({ path, params, pending, successText }) {
+  loginActionStatus.textContent = pending;
+  try {
+    const result = await callFeatureApi(path, params, "GET");
+    const message = result?.message || successText;
+    loginActionStatus.textContent = message;
+    await refreshNeteaseLoginStatus();
+  } catch (error) {
+    loginActionStatus.textContent = error.message || "操作失败。";
   }
-  featureActionSelect.value = target.key;
-  setFeatureParamTemplate();
-  window.location.hash = "feature-form";
 }
 
 function renderDiscoverCards(payload) {
@@ -479,6 +507,7 @@ async function refreshNeteaseLoginStatus() {
 }
 
 async function beginQrLogin() {
+  stopLoginQrRefreshTimer();
   stopLoginPolling();
   renderLoginQrState({
     showImage: false,
@@ -491,8 +520,13 @@ async function beginQrLogin() {
     renderLoginQrState({
       qrimg: qrSession.qrimg,
       showImage: true,
-      message: "请打开网易云音乐 App 扫码，然后在手机上确认登录。",
+      message: "请打开网易云音乐 App 扫码，然后在手机上确认登录（5 分钟后自动刷新）。",
     });
+    loginQrRefreshTimer = window.setTimeout(() => {
+      if (!loginModal.classList.contains("hidden")) {
+        beginQrLogin();
+      }
+    }, 5 * 60 * 1000);
 
     loginPollingTimer = window.setInterval(async () => {
       if (!activeLoginQrKey || loginModal.classList.contains("hidden")) {
@@ -513,11 +547,13 @@ async function beginQrLogin() {
         if (result.code === 800) {
           stopLoginPolling();
           activeLoginQrKey = "";
-          loginQrStatus.textContent = result.message || "二维码已过期，请重新生成。";
+          loginQrStatus.textContent = result.message || "二维码已过期，正在自动刷新。";
+          beginQrLogin();
           return;
         }
         if (result.code === 803 && result.saved_cookie) {
           stopLoginPolling();
+          stopLoginQrRefreshTimer();
           activeLoginQrKey = "";
           renderLoginQrState({
             showImage: false,
@@ -548,6 +584,7 @@ async function beginQrLogin() {
 function openLoginModal() {
   loginModal.classList.remove("hidden");
   syncModalScrollLock();
+  updateLoginModeUI();
   refreshNeteaseLoginStatus();
   beginQrLogin();
 }
@@ -556,6 +593,7 @@ function closeLoginModal() {
   loginModal.classList.add("hidden");
   activeLoginQrKey = "";
   stopLoginPolling();
+  stopLoginQrRefreshTimer();
   syncModalScrollLock();
 }
 
@@ -1446,30 +1484,6 @@ accountOpenQrLoginButton.addEventListener("click", () => {
   openLoginModal();
 });
 
-accountLoginCellphoneButton.addEventListener("click", () => {
-  toggleAccountPopover(false);
-  jumpToFeatureAction("login_cellphone");
-});
-
-accountRegisterCellphoneButton.addEventListener("click", () => {
-  toggleAccountPopover(false);
-  jumpToFeatureAction("register_cellphone");
-});
-
-accountCaptchaSendButton.addEventListener("click", () => {
-  toggleAccountPopover(false);
-  jumpToFeatureAction("captcha_sent");
-});
-
-accountDailySigninButton.addEventListener("click", async () => {
-  try {
-    const result = await fetchDailySignin();
-    accountPopoverStatus.textContent = result.message || "签到成功";
-  } catch (error) {
-    accountPopoverStatus.textContent = error.message || "签到失败";
-  }
-});
-
 loginModal.addEventListener("click", (event) => {
   if (event.target.dataset.closeLoginModal === "true") {
     closeLoginModal();
@@ -1480,18 +1494,47 @@ closeLoginModalButton.addEventListener("click", () => {
   closeLoginModal();
 });
 
-refreshLoginQrButton.addEventListener("click", async () => {
-  await beginQrLogin();
-});
+loginModePassword.addEventListener("change", updateLoginModeUI);
+loginModeCaptcha.addEventListener("change", updateLoginModeUI);
 
-loginDailySigninButton.addEventListener("click", async () => {
-  loginQrStatus.textContent = "正在签到...";
-  try {
-    const result = await fetchDailySignin();
-    loginQrStatus.textContent = result.message || "签到成功。";
-  } catch (error) {
-    loginQrStatus.textContent = error.message || "签到失败。";
+loginSubmitButton.addEventListener("click", async () => {
+  const mode = getLoginMode();
+  const { phone, password, captcha } = getLoginFormValues();
+  if (!phone) {
+    loginActionStatus.textContent = "请先输入手机号。";
+    return;
   }
+
+  if (mode === "password") {
+    if (!password) {
+      loginActionStatus.textContent = "请输入密码。";
+      return;
+    }
+    await runLoginAction({
+      path: "/login/cellphone",
+      params: { phone, password },
+      pending: "正在进行密码登录...",
+      successText: "登录成功。",
+    });
+    return;
+  }
+
+  if (!captcha) {
+    await runLoginAction({
+      path: "/captcha/sent",
+      params: { phone },
+      pending: "正在发送验证码...",
+      successText: "验证码已发送，请输入验证码后再次点击登录。",
+    });
+    return;
+  }
+
+  await runLoginAction({
+    path: "/login/cellphone",
+    params: { phone, captcha },
+    pending: "正在进行验证码登录...",
+    successText: "登录成功。",
+  });
 });
 
 topSearchForm.addEventListener("submit", async (event) => {
@@ -1669,6 +1712,7 @@ syncQualityControls();
 renderPlayerModalList();
 updatePlayerModal(null);
 updateProgressUI();
+updateLoginModeUI();
 refreshNeteaseLoginStatus();
 
 (async () => {
