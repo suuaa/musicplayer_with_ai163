@@ -57,6 +57,9 @@ const modalPlayerTracks = document.querySelector("#modal-player-tracks");
 const modalPlayerProgress = document.querySelector("#modal-player-progress");
 const modalPlayerCurrentTime = document.querySelector("#modal-player-current-time");
 const modalPlayerDuration = document.querySelector("#modal-player-duration");
+const playerLyrics = document.querySelector("#player-lyrics");
+const playerLyricsEmpty = document.querySelector("#player-lyrics-empty");
+const playerLyricsLines = document.querySelector("#player-lyrics-lines");
 const openLoginModalButton = document.querySelector("#open-login-modal");
 const neteaseLoginIndicator = document.querySelector("#netease-login-indicator");
 const neteaseLoginAvatar = document.querySelector("#netease-login-avatar");
@@ -67,12 +70,73 @@ const loginQrPlaceholder = document.querySelector("#login-qr-placeholder");
 const loginUserStatus = document.querySelector("#login-user-status");
 const loginQrStatus = document.querySelector("#login-qr-status");
 const refreshLoginQrButton = document.querySelector("#refresh-login-qr");
+const loginDailySigninButton = document.querySelector("#login-daily-signin");
+const accountPopover = document.querySelector("#account-popover");
+const accountPopoverStatus = document.querySelector("#account-popover-status");
+const accountLoginCellphoneButton = document.querySelector("#account-login-cellphone");
+const accountRegisterCellphoneButton = document.querySelector("#account-register-cellphone");
+const accountCaptchaSendButton = document.querySelector("#account-captcha-send");
+const accountOpenQrLoginButton = document.querySelector("#account-open-qr-login");
+const accountDailySigninButton = document.querySelector("#account-daily-signin");
 const scrollTopButton = document.querySelector("#scroll-top-button");
+const topSearchForm = document.querySelector("#top-search-form");
+const topSearchKeywords = document.querySelector("#top-search-keywords");
+const topSearchType = document.querySelector("#top-search-type");
+const searchStatus = document.querySelector("#search-status");
+const searchResultsBody = document.querySelector("#search-results-body");
+const discoverStatus = document.querySelector("#discover-status");
+const discoverPlaylists = document.querySelector("#discover-playlists");
+const settingsStatus = document.querySelector("#settings-status");
+const settingsForm = document.querySelector("#settings-form");
+const settingsApiBase = document.querySelector("#settings-api-base");
+const settingsDefaultQuality = document.querySelector("#settings-default-quality");
+const settingsUnlockFallback = document.querySelector("#settings-unlock-fallback");
+const settingsLoginRegister = document.querySelector("#settings-login-register");
+const settingsUserCenter = document.querySelector("#settings-user-center");
+const settingsContentLibrary = document.querySelector("#settings-content-library");
+const settingsSearchRecommend = document.querySelector("#settings-search-recommend");
+const settingsFmSigninCloud = document.querySelector("#settings-fm-signin-cloud");
+const reloadSettingsButton = document.querySelector("#reload-settings");
+const featureStatus = document.querySelector("#feature-status");
+const featureActionSelect = document.querySelector("#feature-action-select");
+const featureForm = document.querySelector("#feature-form");
+const featureParams = document.querySelector("#feature-params");
+const featureResult = document.querySelector("#feature-result");
 let scrollTopAnimationTimer = null;
 const PLAYER_STATE_KEY = "music_player_state_v1";
 let loginPollingTimer = null;
 let activeLoginQrKey = "";
 let loginStatusRequestId = 0;
+let lyricTimeline = [];
+let currentLyricIndex = -1;
+let lyricRequestId = 0;
+let currentFeatureSettings = null;
+let lyricWordProgressIndex = -1;
+
+const FEATURE_ACTIONS = [
+  { key: "login_cellphone", label: "登录：手机登录", path: "/login/cellphone", enabledBy: "login_register_enabled", params: { phone: "", password: "" } },
+  { key: "captcha_sent", label: "登录：发送验证码", path: "/captcha/sent", enabledBy: "login_register_enabled", params: { phone: "" } },
+  { key: "captcha_verify", label: "登录：校验验证码", path: "/captcha/verify", enabledBy: "login_register_enabled", params: { phone: "", captcha: "" } },
+  { key: "register_cellphone", label: "注册：手机号注册", path: "/register/cellphone", enabledBy: "login_register_enabled", params: { phone: "", captcha: "", password: "", nickname: "" } },
+  { key: "user_detail", label: "用户：用户信息", path: "/user/detail", enabledBy: "user_center_enabled", params: { uid: "" } },
+  { key: "user_playlist", label: "用户：用户歌单", path: "/user/playlist", enabledBy: "user_center_enabled", params: { uid: "" } },
+  { key: "user_event", label: "用户：用户动态", path: "/user/event", enabledBy: "user_center_enabled", params: { uid: "" } },
+  { key: "user_record", label: "用户：播放记录", path: "/user/record", enabledBy: "user_center_enabled", params: { uid: "", type: "1" } },
+  { key: "song_detail", label: "内容：歌曲详情", path: "/song/detail", enabledBy: "content_library_enabled", params: { ids: "" } },
+  { key: "album_detail", label: "内容：专辑详情", path: "/album", enabledBy: "content_library_enabled", params: { id: "" } },
+  { key: "artist_detail", label: "内容：歌手详情", path: "/artist/detail", enabledBy: "content_library_enabled", params: { id: "" } },
+  { key: "mv_url", label: "内容：MV 地址", path: "/mv/url", enabledBy: "content_library_enabled", params: { id: "" } },
+  { key: "lyric", label: "内容：歌词", path: "/lyric", enabledBy: "content_library_enabled", params: { id: "" } },
+  { key: "comment_music", label: "内容：歌曲评论", path: "/comment/music", enabledBy: "content_library_enabled", params: { id: "" } },
+  { key: "toplist", label: "内容：排行榜", path: "/toplist/detail", enabledBy: "content_library_enabled", params: {} },
+  { key: "search", label: "发现：搜索", path: "/search", enabledBy: "search_recommend_enabled", params: { keywords: "", limit: "30", offset: "0" } },
+  { key: "recommend_resource", label: "发现：推荐歌单", path: "/recommend/resource", enabledBy: "search_recommend_enabled", params: {} },
+  { key: "recommend_songs", label: "发现：推荐歌曲", path: "/recommend/songs", enabledBy: "search_recommend_enabled", params: {} },
+  { key: "personal_fm", label: "发现：私人 FM", path: "/personal_fm", enabledBy: "fm_signin_cloud_enabled", params: {} },
+  { key: "daily_signin", label: "发现：每日签到", path: "/daily_signin", enabledBy: "fm_signin_cloud_enabled", params: { type: "0" } },
+  { key: "user_cloud", label: "发现：云盘", path: "/user/cloud", enabledBy: "fm_signin_cloud_enabled", params: { limit: "30", offset: "0" } },
+  { key: "unlock_song_url", label: "解灰：歌曲地址", path: "/song/url/v1", enabledBy: "content_library_enabled", params: { id: "", level: "lossless" } },
+];
 
 const paginationState = {
   tracks: [],
@@ -103,6 +167,7 @@ function stopLoginPolling() {
 function updateLoginIndicator(statusData) {
   if (statusData?.logged_in) {
     neteaseLoginIndicator.textContent = statusData.nickname || "网易云用户";
+    accountPopoverStatus.textContent = `已登录：${statusData.nickname || "网易云用户"}`;
     openLoginModalButton.classList.add("is-success");
     if (statusData.avatar_url) {
       neteaseLoginAvatar.src = statusData.avatar_url;
@@ -114,6 +179,7 @@ function updateLoginIndicator(statusData) {
     }
   } else {
     neteaseLoginIndicator.textContent = "网易云登录";
+    accountPopoverStatus.textContent = "未登录，点击二维码登录";
     openLoginModalButton.classList.remove("is-success");
     neteaseLoginAvatar.removeAttribute("src");
     neteaseLoginAvatar.classList.add("hidden");
@@ -147,6 +213,230 @@ async function checkLoginQrStatus(key) {
   return data;
 }
 
+async function fetchDailySignin() {
+  const response = await fetch("/api/netease/signin", { method: "POST" });
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.error || "签到失败。");
+  }
+  return data;
+}
+
+async function fetchDiscoverPlaylists() {
+  const response = await fetch("/api/discover/recommend");
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.error || "获取发现页失败。");
+  }
+  return data;
+}
+
+async function fetchSearchResults(keywords, type) {
+  const response = await fetch(`/api/search?keywords=${encodeURIComponent(keywords)}&type=${encodeURIComponent(type)}&limit=30`);
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.error || "搜索失败。");
+  }
+  return data;
+}
+
+async function fetchFeatureSettings() {
+  const response = await fetch("/api/settings");
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.error || "获取设置失败。");
+  }
+  return data;
+}
+
+async function saveFeatureSettings(payload) {
+  const response = await fetch("/api/settings", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.error || "保存设置失败。");
+  }
+  return data;
+}
+
+async function callFeatureApi(path, params = {}, method = "GET") {
+  const response = await fetch("/api/features/proxy", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      path,
+      method,
+      params,
+    }),
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.error || "功能调用失败。");
+  }
+  return data;
+}
+
+function renderFeatureActionOptions() {
+  featureActionSelect.innerHTML = FEATURE_ACTIONS
+    .map((item) => {
+      const disabled = currentFeatureSettings && item.enabledBy && currentFeatureSettings[item.enabledBy] === false;
+      return `<option value="${item.key}" ${disabled ? "disabled" : ""}>${item.label}${disabled ? "（已禁用）" : ""}</option>`;
+    })
+    .join("");
+}
+
+function setFeatureParamTemplate() {
+  const selected = FEATURE_ACTIONS.find((item) => item.key === featureActionSelect.value);
+  if (!selected) {
+    featureParams.value = "{}";
+    return;
+  }
+  featureParams.value = JSON.stringify(selected.params || {}, null, 2);
+}
+
+function fillSettingsForm(settings) {
+  settingsApiBase.value = settings.api_base || "";
+  settingsDefaultQuality.value = settings.default_quality || "lossless";
+  settingsUnlockFallback.checked = Boolean(settings.unlock_fallback_enabled);
+  settingsLoginRegister.checked = Boolean(settings.login_register_enabled);
+  settingsUserCenter.checked = Boolean(settings.user_center_enabled);
+  settingsContentLibrary.checked = Boolean(settings.content_library_enabled);
+  settingsSearchRecommend.checked = Boolean(settings.search_recommend_enabled);
+  settingsFmSigninCloud.checked = Boolean(settings.fm_signin_cloud_enabled);
+}
+
+function collectSettingsForm() {
+  return {
+    api_base: settingsApiBase.value.trim(),
+    default_quality: settingsDefaultQuality.value,
+    unlock_fallback_enabled: settingsUnlockFallback.checked,
+    login_register_enabled: settingsLoginRegister.checked,
+    user_center_enabled: settingsUserCenter.checked,
+    content_library_enabled: settingsContentLibrary.checked,
+    search_recommend_enabled: settingsSearchRecommend.checked,
+    fm_signin_cloud_enabled: settingsFmSigninCloud.checked,
+  };
+}
+
+function toggleAccountPopover(forceVisible) {
+  const shouldShow = typeof forceVisible === "boolean" ? forceVisible : accountPopover.classList.contains("hidden");
+  accountPopover.classList.toggle("hidden", !shouldShow);
+}
+
+function jumpToFeatureAction(actionKey) {
+  const target = FEATURE_ACTIONS.find((item) => item.key === actionKey);
+  if (!target) {
+    return;
+  }
+  featureActionSelect.value = target.key;
+  setFeatureParamTemplate();
+  window.location.hash = "feature-form";
+}
+
+function renderDiscoverCards(payload) {
+  const daily = Array.isArray(payload?.daily_recommend) ? payload.daily_recommend : [];
+  const discover = Array.isArray(payload?.discover_playlists) ? payload.discover_playlists : [];
+  const merged = [...daily, ...discover]
+    .filter((item) => item && (item.id || item.name))
+    .slice(0, 18);
+
+  if (!merged.length) {
+    discoverPlaylists.innerHTML = '<p class="empty">暂无推荐歌单（请先登录后重试）。</p>';
+    return;
+  }
+
+  discoverPlaylists.innerHTML = merged
+    .map((item) => {
+      const id = item.id || "";
+      const coverUrl = item.picUrl || item.coverImgUrl || "";
+      const name = item.name || "未命名歌单";
+      const reason = item.copywriter || item.rcmdtext || `ID: ${id}`;
+      return `
+        <article class="discover-card" data-playlist-id="${escapeHtml(id)}">
+          <img src="${escapeHtml(coverUrl)}" alt="${escapeHtml(name)} 封面">
+          <strong>${escapeHtml(name)}</strong>
+          <span>${escapeHtml(reason)}</span>
+        </article>
+      `;
+    })
+    .join("");
+}
+
+function normalizeSearchRows(data, type) {
+  const result = data?.result || {};
+  if (type === "1") {
+    const songs = Array.isArray(result.songs) ? result.songs : [];
+    return songs.map((item) => ({
+      name: item.name || "-",
+      sub: `${(item.artists || []).map((v) => v.name).join(" / ") || "-"} · ${(item.album || {}).name || "-"}`,
+      kind: "单曲",
+    }));
+  }
+  if (type === "10") {
+    const albums = Array.isArray(result.albums) ? result.albums : [];
+    return albums.map((item) => ({
+      name: item.name || "-",
+      sub: `${(item.artist || {}).name || "-"} · ${item.publishTime || "-"}`,
+      kind: "专辑",
+    }));
+  }
+  if (type === "100") {
+    const artists = Array.isArray(result.artists) ? result.artists : [];
+    return artists.map((item) => ({
+      name: item.name || "-",
+      sub: `粉丝: ${item.fansSize || 0}`,
+      kind: "歌手",
+    }));
+  }
+  if (type === "1000") {
+    const playlists = Array.isArray(result.playlists) ? result.playlists : [];
+    return playlists.map((item) => ({
+      name: item.name || "-",
+      sub: `创建者: ${(item.creator || {}).nickname || "-"} · ${item.trackCount || 0} 首`,
+      kind: "歌单",
+    }));
+  }
+  const mvs = Array.isArray(result.mvs) ? result.mvs : [];
+  return mvs.map((item) => ({
+    name: item.name || "-",
+    sub: `${item.artistName || "-"} · 播放 ${item.playCount || 0}`,
+    kind: "MV",
+  }));
+}
+
+function renderSearchRows(rows) {
+  if (!rows.length) {
+    searchResultsBody.innerHTML = '<tr><td colspan="3" class="empty">暂无搜索结果</td></tr>';
+    return;
+  }
+  searchResultsBody.innerHTML = rows
+    .map(
+      (row) => `
+      <tr>
+        <td title="${escapeHtml(row.name)}">${escapeHtml(row.name)}</td>
+        <td title="${escapeHtml(row.sub)}">${escapeHtml(row.sub)}</td>
+        <td>${escapeHtml(row.kind)}</td>
+      </tr>
+    `,
+    )
+    .join("");
+}
+
+async function loadDiscover() {
+  discoverStatus.textContent = "正在加载推荐...";
+  try {
+    const payload = await fetchDiscoverPlaylists();
+    renderDiscoverCards(payload);
+    discoverStatus.textContent = "推荐已更新";
+  } catch (error) {
+    discoverPlaylists.innerHTML = '<p class="empty">发现页加载失败。</p>';
+    discoverStatus.textContent = error.message || "发现页加载失败";
+  }
+}
+
 function renderLoginQrState({ qrimg = "", message = "", showImage = false }) {
   if (showImage && qrimg) {
     loginQrImage.src = qrimg;
@@ -173,6 +463,7 @@ async function refreshNeteaseLoginStatus() {
     updateLoginIndicator(statusData);
     if (statusData.logged_in) {
       loginUserStatus.textContent = `当前已登录网易云账号：${statusData.nickname || "未知用户"}`;
+      loadDiscover();
     } else {
       loginUserStatus.textContent = "当前未检测到网易云登录状态。";
     }
@@ -304,14 +595,239 @@ function getTrackAudioUrl(track) {
 }
 
 async function fetchTrackPlayInfo(track) {
+  const expectedDurationMs = Number(track?.duration_ms || 0);
   const response = await fetch(
-    `/api/track/playinfo?id=${encodeURIComponent(track.id)}&level=${encodeURIComponent(paginationState.qualityLevel)}`,
+    `/api/track/playinfo?id=${encodeURIComponent(track.id)}&level=${encodeURIComponent(paginationState.qualityLevel)}&expected_duration_ms=${encodeURIComponent(expectedDurationMs > 0 ? expectedDurationMs : "")}`,
   );
   const data = await response.json();
   if (!response.ok) {
     throw new Error(data.error || "未能获取播放地址。");
   }
   return data;
+}
+
+async function fetchTrackLyric(track) {
+  const response = await fetch(`/api/track/lyric?id=${encodeURIComponent(track.id)}`);
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.error || "未能获取歌词。");
+  }
+  return data;
+}
+
+function parseLyricTimestamp(match) {
+  const [minutePart, secondPart] = match.split(":");
+  const minutes = Number(minutePart);
+  const seconds = Number(secondPart);
+  if (!Number.isFinite(minutes) || !Number.isFinite(seconds)) {
+    return null;
+  }
+  return minutes * 60 + seconds;
+}
+
+function parseLyricLines(rawLyric) {
+  if (!rawLyric) {
+    return [];
+  }
+  const rows = String(rawLyric).split(/\r?\n/);
+  const timeline = [];
+  for (const row of rows) {
+    if (!row.trim()) {
+      continue;
+    }
+    const matches = [...row.matchAll(/\[(\d{1,2}:\d{1,2}(?:\.\d{1,3})?)\]/g)];
+    if (!matches.length) {
+      continue;
+    }
+    const text = row.replace(/\[(\d{1,2}:\d{1,2}(?:\.\d{1,3})?)\]/g, "").trim();
+    if (!text) {
+      continue;
+    }
+    for (const matched of matches) {
+      const timestamp = parseLyricTimestamp(matched[1]);
+      if (timestamp !== null) {
+        timeline.push({ time: timestamp, text });
+      }
+    }
+  }
+  timeline.sort((a, b) => a.time - b.time);
+  return timeline;
+}
+
+function parseYrcLines(rawYrc) {
+  if (!rawYrc) {
+    return [];
+  }
+  const rows = String(rawYrc).split(/\r?\n/);
+  const timeline = [];
+  for (const row of rows) {
+    const lineMatch = row.match(/^\[(\d{1,2}:\d{1,2}(?:\.\d{1,3})?)\](.*)$/);
+    if (!lineMatch) {
+      continue;
+    }
+    const time = parseLyricTimestamp(lineMatch[1]);
+    if (time === null) {
+      continue;
+    }
+    const words = [];
+    const tokenRegex = /\((\d+),(\d+),\d+\)([^()]+)/g;
+    let token;
+    while ((token = tokenRegex.exec(lineMatch[2])) !== null) {
+      const startMs = Number(token[1]);
+      const durationMs = Number(token[2]);
+      const text = token[3];
+      if (Number.isFinite(startMs) && Number.isFinite(durationMs) && text) {
+        words.push({ startMs, durationMs, text });
+      }
+    }
+    if (!words.length) {
+      continue;
+    }
+    timeline.push({
+      time,
+      text: words.map((item) => item.text).join(""),
+      words,
+    });
+  }
+  timeline.sort((a, b) => a.time - b.time);
+  return timeline;
+}
+
+function renderLyrics(lines) {
+  lyricTimeline = lines;
+  currentLyricIndex = -1;
+  lyricWordProgressIndex = -1;
+  playerLyricsLines.innerHTML = "";
+  if (!lyricTimeline.length) {
+    playerLyricsEmpty.textContent = "暂无可用歌词。";
+    playerLyricsEmpty.classList.remove("hidden");
+    return;
+  }
+
+  playerLyricsEmpty.classList.add("hidden");
+  playerLyricsLines.innerHTML = lyricTimeline
+    .map((line, index) => {
+      if (Array.isArray(line.words) && line.words.length) {
+        const wordsHtml = line.words
+          .map(
+            (word, wordIndex) =>
+              `<span class="lyric-word" data-word-index="${wordIndex}" data-word-start-ms="${word.startMs}" data-word-duration-ms="${word.durationMs}">${escapeHtml(word.text)}</span>`,
+          )
+          .join("");
+        return `<p class="player-lyric-line" data-lyric-index="${index}" data-lyric-time="${line.time}">${wordsHtml}</p>`;
+      }
+      return `<p class="player-lyric-line" data-lyric-index="${index}" data-lyric-time="${line.time}">${escapeHtml(line.text)}</p>`;
+    })
+    .join("");
+}
+
+function resetLyrics(message = "歌词会显示在这里。") {
+  lyricTimeline = [];
+  currentLyricIndex = -1;
+  playerLyricsLines.innerHTML = "";
+  playerLyricsEmpty.textContent = message;
+  playerLyricsEmpty.classList.remove("hidden");
+  playerLyrics.scrollTop = 0;
+}
+
+async function loadTrackLyrics(track) {
+  if (!track) {
+    resetLyrics();
+    return;
+  }
+  const requestId = ++lyricRequestId;
+  const trackId = Number(track.id);
+  resetLyrics("正在加载歌词...");
+  try {
+    const lyricData = await fetchTrackLyric(track);
+    const currentTrack = getCurrentTrack();
+    if (requestId !== lyricRequestId || !currentTrack || Number(currentTrack.id) !== trackId) {
+      return;
+    }
+    const yrcTimeline = parseYrcLines(lyricData.yrc);
+    if (yrcTimeline.length) {
+      renderLyrics(yrcTimeline);
+    } else {
+      renderLyrics(parseLyricLines(lyricData.lyric));
+    }
+  } catch (error) {
+    const currentTrack = getCurrentTrack();
+    if (requestId !== lyricRequestId || !currentTrack || Number(currentTrack.id) !== trackId) {
+      return;
+    }
+    resetLyrics(error.message || "歌词加载失败。");
+  }
+}
+
+function updateLyricHighlight(currentTime) {
+  if (!lyricTimeline.length) {
+    return;
+  }
+
+  let nextIndex = -1;
+  for (let i = lyricTimeline.length - 1; i >= 0; i -= 1) {
+    if (currentTime + 0.06 >= lyricTimeline[i].time) {
+      nextIndex = i;
+      break;
+    }
+  }
+
+  if (nextIndex === currentLyricIndex) {
+    return;
+  }
+
+  if (currentLyricIndex >= 0) {
+    const prevNode = playerLyricsLines.querySelector(`[data-lyric-index="${currentLyricIndex}"]`);
+    if (prevNode) {
+      prevNode.classList.remove("is-active");
+    }
+  }
+
+  currentLyricIndex = nextIndex;
+  if (currentLyricIndex < 0) {
+    return;
+  }
+
+  const activeNode = playerLyricsLines.querySelector(`[data-lyric-index="${currentLyricIndex}"]`);
+  if (!activeNode) {
+    return;
+  }
+  activeNode.classList.add("is-active");
+
+  // Reposition by visual delta to avoid offset errors caused by nested layout/padding.
+  const containerRect = playerLyrics.getBoundingClientRect();
+  const lineRect = activeNode.getBoundingClientRect();
+  const containerCenterY = containerRect.top + containerRect.height / 2;
+  const lineCenterY = lineRect.top + lineRect.height / 2;
+  const deltaY = lineCenterY - containerCenterY;
+  const threshold = Math.max(12, Math.floor(lineRect.height * 0.6));
+
+  if (Math.abs(deltaY) > threshold) {
+    const maxScrollTop = Math.max(0, playerLyrics.scrollHeight - playerLyrics.clientHeight);
+    const nextScrollTop = Math.min(
+      maxScrollTop,
+      Math.max(0, Math.round(playerLyrics.scrollTop + deltaY)),
+    );
+    playerLyrics.scrollTop = nextScrollTop;
+  }
+
+  const activeLine = lyricTimeline[currentLyricIndex];
+  if (activeLine && Array.isArray(activeLine.words) && activeLine.words.length) {
+    const elapsedMs = Math.max(0, Math.floor((currentTime - activeLine.time) * 1000));
+    if (lyricWordProgressIndex !== currentLyricIndex || currentTime === 0) {
+      const allWords = activeNode.querySelectorAll(".lyric-word");
+      allWords.forEach((node) => node.classList.remove("is-active"));
+    }
+    lyricWordProgressIndex = currentLyricIndex;
+    const wordNodes = activeNode.querySelectorAll(".lyric-word");
+    activeLine.words.forEach((word, idx) => {
+      if (elapsedMs >= word.startMs) {
+        wordNodes[idx]?.classList.add("is-active");
+      } else {
+        wordNodes[idx]?.classList.remove("is-active");
+      }
+    });
+  }
 }
 
 function persistPlayerState() {
@@ -347,10 +863,12 @@ function resetPlaybackState(message = "请选择一首歌开始播放。") {
   trackAudio.removeAttribute("src");
   trackAudio.load();
   paginationState.loadedTrackId = null;
+  lyricRequestId += 1;
   playerStatus.textContent = message;
   modalPlayerStatus.textContent = message;
   updateProgressUI();
   updatePlayButtons();
+  resetLyrics();
 }
 
 function updateProgressUI() {
@@ -375,6 +893,7 @@ function seekAudioByPercent(percentValue) {
   const percent = Math.min(100, Math.max(0, Number(percentValue) || 0));
   trackAudio.currentTime = (percent / 100) * duration;
   updateProgressUI();
+  updateLyricHighlight(trackAudio.currentTime);
 }
 
 function updatePlayerDock(track) {
@@ -414,6 +933,7 @@ function updatePlayerModal(track) {
     modalPlayerTrackTitle.textContent = "未选择歌曲";
     modalPlayerSubtitle.textContent = "请先在歌单列表中选择一首歌曲。";
     modalPlayerStatus.textContent = "等待加载播放状态。";
+    resetLyrics();
     return;
   }
 
@@ -476,6 +996,7 @@ async function startPlayback(track) {
   updatePlayButtons();
   playerStatus.textContent = "正在获取可播放地址...";
   modalPlayerStatus.textContent = playerStatus.textContent;
+  loadTrackLyrics(track);
 
   try {
     const playInfo = await fetchTrackPlayInfo(track);
@@ -484,7 +1005,17 @@ async function startPlayback(track) {
     trackAudio.load();
     await trackAudio.play();
     const levelText = playInfo.level ? `，音质 ${playInfo.level}` : "";
-    playerStatus.textContent = `正在播放${levelText}。`;
+    const unlockApplied = Boolean(playInfo.duration_mismatch_unlock || playInfo.short_track_unlock_applied);
+    const durationMeta =
+      Number.isFinite(Number(playInfo.expected_duration_ms)) && Number.isFinite(Number(playInfo.actual_duration_ms))
+        ? `（时长期望 ${formatDuration(Number(playInfo.expected_duration_ms))} / 返回 ${formatDuration(Number(playInfo.actual_duration_ms))}）`
+        : "";
+    const resolvedLevelMeta =
+      playInfo.resolved_level && String(playInfo.resolved_level) !== String(playInfo.requested_level)
+        ? `，回退 ${playInfo.resolved_level}`
+        : "";
+    const unlockMeta = unlockApplied ? "，已启用解灰替换" : "，未触发解灰";
+    playerStatus.textContent = `正在播放${levelText}${resolvedLevelMeta}${unlockMeta}${durationMeta}。`;
     modalPlayerStatus.textContent = playerStatus.textContent;
     updateProgressUI();
   } catch (error) {
@@ -828,10 +1359,12 @@ trackAudio.addEventListener("error", () => {
 
 trackAudio.addEventListener("loadedmetadata", () => {
   updateProgressUI();
+  updateLyricHighlight(trackAudio.currentTime);
 });
 
 trackAudio.addEventListener("timeupdate", () => {
   updateProgressUI();
+  updateLyricHighlight(trackAudio.currentTime);
 });
 
 function applyQualityLevel(level) {
@@ -903,8 +1436,38 @@ closePlayerModalButton.addEventListener("click", () => {
   closePlayerModal();
 });
 
-openLoginModalButton.addEventListener("click", () => {
+openLoginModalButton.addEventListener("click", (event) => {
+  event.stopPropagation();
+  toggleAccountPopover();
+});
+
+accountOpenQrLoginButton.addEventListener("click", () => {
+  toggleAccountPopover(false);
   openLoginModal();
+});
+
+accountLoginCellphoneButton.addEventListener("click", () => {
+  toggleAccountPopover(false);
+  jumpToFeatureAction("login_cellphone");
+});
+
+accountRegisterCellphoneButton.addEventListener("click", () => {
+  toggleAccountPopover(false);
+  jumpToFeatureAction("register_cellphone");
+});
+
+accountCaptchaSendButton.addEventListener("click", () => {
+  toggleAccountPopover(false);
+  jumpToFeatureAction("captcha_sent");
+});
+
+accountDailySigninButton.addEventListener("click", async () => {
+  try {
+    const result = await fetchDailySignin();
+    accountPopoverStatus.textContent = result.message || "签到成功";
+  } catch (error) {
+    accountPopoverStatus.textContent = error.message || "签到失败";
+  }
 });
 
 loginModal.addEventListener("click", (event) => {
@@ -919,6 +1482,60 @@ closeLoginModalButton.addEventListener("click", () => {
 
 refreshLoginQrButton.addEventListener("click", async () => {
   await beginQrLogin();
+});
+
+loginDailySigninButton.addEventListener("click", async () => {
+  loginQrStatus.textContent = "正在签到...";
+  try {
+    const result = await fetchDailySignin();
+    loginQrStatus.textContent = result.message || "签到成功。";
+  } catch (error) {
+    loginQrStatus.textContent = error.message || "签到失败。";
+  }
+});
+
+topSearchForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const keywords = topSearchKeywords.value.trim();
+  const type = topSearchType.value;
+  if (!keywords) {
+    searchStatus.textContent = "请输入搜索关键词";
+    return;
+  }
+  searchStatus.textContent = "搜索中...";
+  try {
+    const data = await fetchSearchResults(keywords, type);
+    renderSearchRows(normalizeSearchRows(data, type));
+    searchStatus.textContent = `搜索完成：${keywords}`;
+    window.location.hash = "search-panel";
+  } catch (error) {
+    renderSearchRows([]);
+    searchStatus.textContent = error.message || "搜索失败";
+  }
+});
+
+discoverPlaylists.addEventListener("click", (event) => {
+  const card = event.target.closest("[data-playlist-id]");
+  if (!card) {
+    return;
+  }
+  const playlistId = card.dataset.playlistId;
+  if (!playlistId) {
+    return;
+  }
+  input.value = playlistId;
+  form.requestSubmit();
+  window.location.hash = "playlist-form";
+});
+
+document.addEventListener("click", (event) => {
+  if (
+    !accountPopover.classList.contains("hidden") &&
+    !accountPopover.contains(event.target) &&
+    !openLoginModalButton.contains(event.target)
+  ) {
+    toggleAccountPopover(false);
+  }
 });
 
 modalPlayerPlayButton.addEventListener("click", async () => {
@@ -983,8 +1600,92 @@ nextPageButton.addEventListener("click", () => {
   renderPagination();
 });
 
+featureActionSelect.addEventListener("change", () => {
+  setFeatureParamTemplate();
+});
+
+featureForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const selected = FEATURE_ACTIONS.find((item) => item.key === featureActionSelect.value);
+  if (!selected) {
+    featureStatus.textContent = "未选择有效功能。";
+    return;
+  }
+
+  let params = {};
+  const rawParams = featureParams.value.trim();
+  if (rawParams) {
+    try {
+      params = JSON.parse(rawParams);
+    } catch (error) {
+      featureStatus.textContent = "参数 JSON 格式错误。";
+      return;
+    }
+  }
+  if (!params || typeof params !== "object" || Array.isArray(params)) {
+    featureStatus.textContent = "参数必须是 JSON 对象。";
+    return;
+  }
+
+  featureStatus.textContent = `正在执行：${selected.label}`;
+  featureResult.textContent = "请求中...";
+  try {
+    const result = await callFeatureApi(selected.path, params, "GET");
+    featureResult.textContent = JSON.stringify(result, null, 2);
+    featureStatus.textContent = `执行成功：${selected.label}`;
+  } catch (error) {
+    featureResult.textContent = error.message || "功能调用失败。";
+    featureStatus.textContent = `执行失败：${selected.label}`;
+  }
+});
+
+settingsForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  settingsStatus.textContent = "正在保存...";
+  try {
+    const saved = await saveFeatureSettings(collectSettingsForm());
+    currentFeatureSettings = saved.settings || collectSettingsForm();
+    fillSettingsForm(currentFeatureSettings);
+    renderFeatureActionOptions();
+    settingsStatus.textContent = "设置已保存";
+  } catch (error) {
+    settingsStatus.textContent = error.message || "保存失败";
+  }
+});
+
+reloadSettingsButton.addEventListener("click", async () => {
+  settingsStatus.textContent = "正在加载...";
+  try {
+    currentFeatureSettings = await fetchFeatureSettings();
+    fillSettingsForm(currentFeatureSettings);
+    renderFeatureActionOptions();
+    settingsStatus.textContent = "设置已加载";
+  } catch (error) {
+    settingsStatus.textContent = error.message || "加载失败";
+  }
+});
+
 syncQualityControls();
 renderPlayerModalList();
 updatePlayerModal(null);
 updateProgressUI();
 refreshNeteaseLoginStatus();
+
+(async () => {
+  settingsStatus.textContent = "正在加载...";
+  try {
+    currentFeatureSettings = await fetchFeatureSettings();
+    fillSettingsForm(currentFeatureSettings);
+    renderFeatureActionOptions();
+    if (!featureActionSelect.value && FEATURE_ACTIONS.length) {
+      featureActionSelect.value = FEATURE_ACTIONS[0].key;
+    }
+    setFeatureParamTemplate();
+    settingsStatus.textContent = "设置已加载";
+  } catch (error) {
+    renderFeatureActionOptions();
+    featureStatus.textContent = "功能中心加载失败";
+    settingsStatus.textContent = error.message || "设置加载失败";
+  }
+  await loadDiscover();
+})();

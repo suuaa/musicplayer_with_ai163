@@ -1,0 +1,10 @@
+{
+  "api_base": "http://127.0.0.1:3000",
+  "default_quality": "lossless",
+  "unlock_fallback_enabled": true,
+  "login_register_enabled": true,
+  "user_center_enabled": true,
+  "content_library_enabled": true,
+  "search_recommend_enabled": true,
+  "fm_signin_cloud_enabled": true
+}
