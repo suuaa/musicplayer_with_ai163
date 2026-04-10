@@ -1,0 +1,256 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>网易云歌单查询</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <main class="page">
+    <header class="topbar">
+      <div class="topbar-brand">
+        <p class="eyebrow">Netease Playlist Viewer</p>
+        <strong>网易云歌单助手</strong>
+      </div>
+      <nav class="topbar-nav">
+        <button id="open-login-modal" type="button" class="topbar-link topbar-button topbar-user-button">
+          <img id="netease-login-avatar" class="topbar-user-avatar hidden" alt="网易云头像">
+          <span id="netease-login-indicator" class="topbar-user-name">网易云登录</span>
+        </button>
+        <a class="topbar-link" href="#playlist-form">歌单查询</a>
+      </nav>
+    </header>
+
+    <section class="hero">
+      <h1>网易云音乐歌单查询</h1>
+      <p class="intro">输入歌单 ID，或者直接粘贴网易云歌单链接，后端会自动提取并返回歌单详情与歌曲列表。</p>
+
+      <form id="playlist-form" class="search-form">
+        <label for="playlist-id" class="sr-only">歌单 ID</label>
+        <input id="playlist-id" name="playlist-id" type="text" placeholder="例如：3778678 或 https://music.163.com/#/playlist?id=3778678" autocomplete="off" required>
+        <button type="submit">查询歌单</button>
+      </form>
+
+      <p id="status" class="status">等待输入歌单 ID。</p>
+    </section>
+
+    <section id="playlist-card" class="playlist-card hidden">
+      <img id="cover" class="cover" alt="歌单封面">
+      <div class="playlist-meta">
+        <h2 id="playlist-name"></h2>
+        <p id="playlist-desc" class="description"></p>
+        <div class="stats">
+          <span id="creator"></span>
+          <span id="play-count"></span>
+          <span id="track-count"></span>
+        </div>
+      </div>
+    </section>
+
+    <section class="tracks-panel">
+      <div class="panel-head">
+        <h3>歌曲列表</h3>
+        <span id="result-count"></span>
+      </div>
+      <div class="pagination-toolbar">
+        <label class="page-size-control" for="page-size">
+          <span>每页显示</span>
+          <select id="page-size">
+            <option value="20">20</option>
+            <option value="40">40</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+          </select>
+        </label>
+        <span id="page-summary" class="page-summary">暂无分页数据</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>歌曲名</th>
+              <th>歌手</th>
+              <th>专辑</th>
+              <th>时长</th>
+            </tr>
+          </thead>
+          <tbody id="tracks-body">
+            <tr>
+              <td colspan="4" class="empty">查询后会在这里显示歌曲列表。</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="pagination-actions">
+        <button id="prev-page" type="button" class="secondary-button" disabled>上一页</button>
+        <span id="page-indicator" class="page-indicator">第 0 / 0 页</span>
+        <button id="next-page" type="button" class="secondary-button" disabled>下一页</button>
+      </div>
+    </section>
+
+  </main>
+
+  <div id="track-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="track-detail-name">
+    <div class="modal-backdrop" data-close-modal="true"></div>
+    <section class="modal-panel">
+      <div class="panel-head">
+        <h3>歌曲详情</h3>
+        <button id="close-track-modal" type="button" class="modal-close" aria-label="关闭弹窗">关闭</button>
+      </div>
+      <div class="track-detail-layout">
+        <img id="track-detail-cover" class="track-detail-cover" alt="歌曲封面">
+        <div class="track-detail-meta">
+          <h2 id="track-detail-name"></h2>
+          <p id="track-detail-subtitle" class="description"></p>
+          <div class="player-panel">
+            <div class="player-toolbar">
+              <button id="play-track-button" type="button" class="play-track-button">播放歌曲</button>
+              <label class="quality-control" for="quality-select">
+                <span>音质</span>
+                <select id="quality-select">
+                  <option value="standard">标准</option>
+                  <option value="higher">较高</option>
+                  <option value="exhigh">极高</option>
+                  <option value="lossless" selected>无损</option>
+                </select>
+              </label>
+              <button id="open-player-modal" type="button" class="secondary-button">打开播放器</button>
+            </div>
+            <span id="player-status" class="page-summary">准备就绪后可播放，部分歌曲可能因版权限制无法播放。</span>
+            <audio id="track-audio" class="track-audio" controls preload="none"></audio>
+          </div>
+          <div class="track-detail-stats">
+            <span id="track-detail-artist"></span>
+            <span id="track-detail-album"></span>
+            <span id="track-detail-duration"></span>
+            <span id="track-detail-id"></span>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <section id="player-dock" class="player-dock hidden">
+    <div class="player-dock-track">
+      <img id="dock-cover" class="player-dock-cover" alt="当前歌曲封面">
+      <div class="player-dock-meta">
+        <strong id="dock-title">未选择歌曲</strong>
+        <span id="dock-subtitle">请选择一首歌开始播放</span>
+      </div>
+    </div>
+    <div class="player-progress player-dock-progress">
+      <span id="dock-current-time" class="progress-time">00:00</span>
+      <input id="dock-progress" class="progress-slider" type="range" min="0" max="100" step="0.1" value="0" aria-label="底部播放器进度">
+      <span id="dock-duration" class="progress-time">00:00</span>
+    </div>
+    <div class="player-dock-controls">
+      <button id="dock-prev" type="button" class="secondary-button">上一首</button>
+      <button id="dock-play-toggle" type="button" class="play-track-button">播放</button>
+      <button id="dock-next" type="button" class="secondary-button">下一首</button>
+      <label class="quality-control" for="dock-quality-select">
+        <span>音质</span>
+        <select id="dock-quality-select">
+          <option value="standard">标准</option>
+          <option value="higher">较高</option>
+          <option value="exhigh">极高</option>
+          <option value="lossless" selected>无损</option>
+        </select>
+      </label>
+      <button id="dock-open-player" type="button" class="secondary-button">播放器</button>
+    </div>
+  </section>
+
+  <div id="player-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="modal-player-title">
+    <div class="modal-backdrop" data-close-player-modal="true"></div>
+    <section class="modal-panel player-modal-panel">
+      <div class="panel-head">
+        <h3 id="modal-player-title">播放器</h3>
+        <button id="close-player-modal" type="button" class="modal-close" aria-label="关闭播放器">关闭</button>
+      </div>
+      <section class="player-shell">
+        <section class="player-main">
+          <img id="modal-player-cover" class="player-main-cover" alt="当前歌曲封面">
+          <div class="player-main-meta">
+            <p id="modal-player-playlist" class="eyebrow">当前未加载歌单</p>
+            <h1 id="modal-player-track-title">未选择歌曲</h1>
+            <p id="modal-player-subtitle" class="intro">请先在歌单列表中选择一首歌曲。</p>
+            <div class="player-toolbar">
+              <button id="modal-player-prev" type="button" class="secondary-button">上一首</button>
+              <button id="modal-player-play" type="button" class="play-track-button">播放</button>
+              <button id="modal-player-next" type="button" class="secondary-button">下一首</button>
+              <label class="quality-control" for="modal-player-quality">
+                <span>音质</span>
+                <select id="modal-player-quality">
+                  <option value="standard">标准</option>
+                  <option value="higher">较高</option>
+                  <option value="exhigh">极高</option>
+                  <option value="lossless" selected>无损</option>
+                </select>
+              </label>
+            </div>
+            <div class="player-progress player-modal-progress">
+              <span id="modal-player-current-time" class="progress-time">00:00</span>
+              <input id="modal-player-progress" class="progress-slider" type="range" min="0" max="100" step="0.1" value="0" aria-label="弹窗播放器进度">
+              <span id="modal-player-duration" class="progress-time">00:00</span>
+            </div>
+            <p id="modal-player-status" class="status">等待加载播放状态。</p>
+          </div>
+        </section>
+
+        <section class="tracks-panel player-modal-list">
+          <div class="panel-head">
+            <h3>播放列表</h3>
+            <span id="modal-player-count" class="page-summary">0 首</span>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>歌曲名</th>
+                  <th>歌手</th>
+                  <th>时长</th>
+                </tr>
+              </thead>
+              <tbody id="modal-player-tracks">
+                <tr>
+                  <td colspan="3" class="empty">等待歌单页加载播放列表。</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+    </section>
+  </div>
+
+  <div id="login-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="login-modal-title">
+    <div class="modal-backdrop" data-close-login-modal="true"></div>
+    <section class="modal-panel login-modal-panel">
+      <div class="panel-head">
+        <h3 id="login-modal-title">网易云登录</h3>
+        <button id="close-login-modal" type="button" class="modal-close" aria-label="关闭登录弹窗">关闭</button>
+      </div>
+      <section class="login-panel">
+        <div class="login-qr-card">
+          <img id="login-qr-image" class="login-qr-image hidden" alt="网易云登录二维码">
+          <div id="login-qr-placeholder" class="login-qr-placeholder">点击下方按钮生成登录二维码</div>
+        </div>
+        <div class="login-meta">
+          <p id="login-user-status" class="status">当前未检测到网易云登录状态。</p>
+          <p id="login-qr-status" class="page-summary">生成二维码后，请使用网易云音乐 App 扫码登录。</p>
+          <div class="admin-actions">
+            <button id="refresh-login-qr" type="button">生成二维码</button>
+          </div>
+        </div>
+      </section>
+    </section>
+  </div>
+
+  <button id="scroll-top-button" class="scroll-top-button" type="button" aria-label="回到顶部">
+    <span class="scroll-top-icon">↑</span>
+  </button>
+
+  <script src="/app.js"></script>
+</body>
+</html>

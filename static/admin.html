@@ -1,0 +1,54 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cookie 后台</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <div class="hero-top">
+        <p class="eyebrow">Cookie Admin</p>
+        <a class="admin-link" href="/">返回查询页</a>
+      </div>
+      <h1>网易云 Cookie 后台</h1>
+      <p class="intro">输入后台密码后，才可以查看和更新本地 <code>netease_cookie.conf</code>。</p>
+      <p id="admin-status" class="status">请先输入后台密码。</p>
+    </section>
+
+    <section id="admin-login-panel" class="tracks-panel">
+      <div class="panel-head">
+        <h3>后台登录</h3>
+        <span class="page-summary">密码存放在 <code>admin_password.conf</code></span>
+      </div>
+      <form id="admin-login-form" class="admin-form">
+        <label for="admin-password">后台密码</label>
+        <input id="admin-password" type="password" class="admin-input" placeholder="请输入后台密码" autocomplete="current-password">
+        <div class="admin-actions">
+          <button type="submit">登录后台</button>
+        </div>
+      </form>
+    </section>
+
+    <section id="admin-cookie-panel" class="tracks-panel hidden">
+      <div class="panel-head">
+        <h3>Cookie 内容</h3>
+        <span id="cookie-meta"></span>
+      </div>
+      <form id="cookie-form" class="admin-form">
+        <label for="cookie-input">新的 Cookie</label>
+        <textarea id="cookie-input" rows="14" placeholder="请粘贴完整 Cookie"></textarea>
+        <div class="admin-actions">
+          <button type="submit">保存 Cookie</button>
+          <button type="button" id="reload-cookie" class="secondary-button">重新读取</button>
+          <button type="button" id="logout-button" class="secondary-button">退出登录</button>
+        </div>
+      </form>
+    </section>
+  </main>
+
+  <script src="/admin.js"></script>
+</body>
+</html>
