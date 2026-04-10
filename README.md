@@ -1,4 +1,4 @@
-# 网易云歌单播放器（Rust 后端）
+﻿# 网易云歌单播放器（Rust 后端）
 
 本项目后端已全部迁移为 Rust 实现。
 
@@ -25,6 +25,10 @@ cargo run
 - `api-enhanced` 需要运行在 `http://127.0.0.1:3000`
 - Cookie 文件：`netease_cookie.conf`
 - 后端地址配置文件：`api_enhanced_base.conf`
+
+## 引用项目
+
+- `api-enhanced`（基于 `NeteaseCloudMusicApi`）
 
 ## 项目结构
 
