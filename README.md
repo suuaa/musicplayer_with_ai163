@@ -1,26 +1,32 @@
-﻿# Netease Playlist Player (Rust Backend)
+# 网易云歌单播放器（Rust 后端）
 
-This project is now fully backended by Rust.
+本项目后端已全部迁移为 Rust 实现。
 
-## Run
+## 运行方式
 
 ```powershell
 cd E:\codex
-cargo run`r`n# or`r`n.\start-rust-backend.ps1
+cargo run
 ```
 
-Open:
+或使用一键启动脚本：
+
+```powershell
+.\start-rust-backend.ps1
+```
+
+启动后访问：
 
 - http://127.0.0.1:8000/
 - http://127.0.0.1:8000/admin.html
 
-## Notes
+## 说明
 
-- `api-enhanced` should be running at `http://127.0.0.1:3000`.
-- Cookie file: `netease_cookie.conf`
-- Backend base config: `api_enhanced_base.conf`
+- `api-enhanced` 需要运行在 `http://127.0.0.1:3000`
+- Cookie 文件：`netease_cookie.conf`
+- 后端地址配置文件：`api_enhanced_base.conf`
 
-## Core Structure
+## 项目结构
 
 ```text
 E:\codex
@@ -36,4 +42,3 @@ E:\codex
 |   `-- styles.css
 `-- api-enhanced-src/
 ```
-
